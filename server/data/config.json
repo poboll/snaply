@@ -1,0 +1,35 @@
+{
+  "storageType": "local",
+  "site": {
+    "baseUrl": "",
+    "urlPrefix": "/uploads"
+  },
+  "advanced": {
+    "convertToWebp": true,
+    "webpQuality": 80,
+    "preserveExif": true,
+    "generateThumbnail": true,
+    "thumbnailSize": 200,
+    "maxFileSize": 10
+  },
+  "local": {
+    "uploadDir": "./uploads",
+    "publicUrl": "/uploads"
+  },
+  "s3": {
+    "endpoint": "https://s3.amazonaws.com",
+    "region": "us-east-1",
+    "bucket": "",
+    "accessKey": "",
+    "secretKey": "",
+    "publicUrl": ""
+  },
+  "minio": {
+    "endpoint": "http://localhost:9000",
+    "region": "auto",
+    "bucket": "snaply",
+    "accessKey": "minioadmin",
+    "secretKey": "minioadmin",
+    "publicUrl": ""
+  }
+}

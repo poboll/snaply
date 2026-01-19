@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reset and Global Styles */
+body {
+  background-color: #404040; /* Dark desktop background */
+  margin: 0;
+  overflow: hidden;
+  font-family: 'MS Sans Serif', 'Tahoma', sans-serif;
+  -webkit-font-smoothing: none;
+}
+
+/* Retro Dotted Background Pattern */
+.bg-pattern {
+  background-image: radial-gradient(#555 1px, transparent 1px);
+  background-size: 4px 4px;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+  background: #dfdfdf;
+}
+::-webkit-scrollbar-button {
+  width: 16px;
+  height: 16px;
+  background: #c0c0c0;
+  box-shadow: inset 1px 1px #fff, inset -1px -1px #808080, 1px 1px #000;
+}
+::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  box-shadow: inset 1px 1px #fff, inset -1px -1px #808080, 1px 1px #000;
+}
+::-webkit-scrollbar-track {
+  background: #e0e0e0;
+  background-image: linear-gradient(45deg, #c0c0c0 25%, transparent 25%, transparent 75%, #c0c0c0 75%, #c0c0c0), linear-gradient(45deg, #c0c0c0 25%, transparent 25%, transparent 75%, #c0c0c0 75%, #c0c0c0);
+  background-size: 4px 4px;
+}
+
+:focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: -2px;
+}
