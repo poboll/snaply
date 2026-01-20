@@ -32,10 +32,19 @@ export interface LocalConfig {
   publicUrl: string
 }
 
+export interface AIConfig {
+  enabled: boolean
+  provider: 'ollama' | 'gemini' | 'qwen' | 'zhipu' | 'siliconflow'
+  apiKey: string
+  baseUrl?: string  // For Ollama
+  model?: string    // Optional model override
+}
+
 export interface AppConfig {
   storageType: StorageType
   site: SiteConfig
   advanced: AdvancedConfig
+  ai: AIConfig
   local: LocalConfig
   s3: S3Config
   minio: S3Config
@@ -74,6 +83,13 @@ const defaultConfig: AppConfig = {
     accessKey: 'minioadmin',
     secretKey: 'minioadmin',
     publicUrl: ''
+  },
+  ai: {
+    enabled: false,
+    provider: 'siliconflow',
+    apiKey: '',
+    baseUrl: 'http://localhost:11434',
+    model: 'THUDM/GLM-4.1V-9B-Thinking'
   }
 }
 
@@ -94,6 +110,7 @@ export const useConfigStore = defineStore('config', () => {
       if (data.local) Object.assign(config.local, data.local)
       if (data.s3) Object.assign(config.s3, data.s3)
       if (data.minio) Object.assign(config.minio, data.minio)
+      if (data.ai) Object.assign(config.ai, data.ai)
       isOnline.value = true
       lastError.value = ''
     } catch (e) {
@@ -137,6 +154,38 @@ export const useConfigStore = defineStore('config', () => {
     }
   }
 
+  // Test AI provider connection
+  async function testAIConnection(): Promise<{ success: boolean; message: string }> {
+    try {
+      const res = await fetch('/api/config/test-ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config.ai)
+      })
+      const json = await res.json()
+
+      // 显示完整的后端响应信息
+      if (!json.success) {
+        // 如果失败，显示详细错误（包括 HTTP 状态码）
+        const statusInfo = res.ok ? '' : `\n\nHTTP ${res.status} ${res.statusText}`
+        return {
+          success: false,
+          message: json.message + statusInfo
+        }
+      }
+
+      return {
+        success: json.success,
+        message: json.message || 'AI 连接成功'
+      }
+    } catch (e: any) {
+      return {
+        success: false,
+        message: `AI 连接测试失败: 无法连接到服务器\n\n错误详情: ${e.message}`
+      }
+    }
+  }
+
   // Note: Call loadConfig() from the component that uses this store
 
   return {
@@ -146,6 +195,7 @@ export const useConfigStore = defineStore('config', () => {
     lastError,
     loadConfig,
     saveConfig,
-    testConnection
+    testConnection,
+    testAIConnection
   }
 })

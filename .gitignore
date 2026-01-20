@@ -22,3 +22,49 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# 依赖
+node_modules/
+server/node_modules/
+
+# 上传的图片（不要提交到 Git）
+server/uploads/
+server/uploads/*
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.JPG
+*.JPEG
+*.PNG
+*.GIF
+
+# 配置文件（可能包含敏感信息）
+server/data/config.json
+
+# 数据库文件
+server/data/images.json
+
+# 日志
+*.log
+npm-debug.log*
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# IDE 配置
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 构建产物
+dist/
+build/
+.cache/
+
+# 环境变量
+.env
+.env.local

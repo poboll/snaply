@@ -1,6 +1,8 @@
 import { Hono } from 'hono'
 import fs from 'fs/promises'
 import path from 'path'
+import sharp from 'sharp'
+import { logger } from '../utils/logger.js'
 
 const CONFIG_FILE = path.join(process.cwd(), 'data', 'config.json')
 
@@ -18,10 +20,19 @@ interface AdvancedConfig {
   maxFileSize: number  // in MB
 }
 
+interface AIConfig {
+  enabled: boolean
+  provider: 'ollama' | 'gemini' | 'qwen' | 'zhipu' | 'siliconflow'
+  apiKey: string
+  baseUrl?: string  // For Ollama
+  model?: string    // Optional model override
+}
+
 interface AppConfig {
   storageType: 'local' | 's3' | 'minio'
   site: SiteConfig
   advanced: AdvancedConfig
+  ai: AIConfig
   local: {
     uploadDir: string
     publicUrl: string
@@ -77,6 +88,13 @@ const defaultConfig: AppConfig = {
     accessKey: 'minioadmin',
     secretKey: 'minioadmin',
     publicUrl: ''
+  },
+  ai: {
+    enabled: false,
+    provider: 'siliconflow',
+    apiKey: '',
+    baseUrl: 'http://localhost:11434',
+    model: 'THUDM/GLM-4.1V-9B-Thinking'
   }
 }
 
@@ -92,7 +110,8 @@ async function loadConfig(): Promise<AppConfig> {
       advanced: { ...defaultConfig.advanced, ...parsed.advanced },
       local: { ...defaultConfig.local, ...parsed.local },
       s3: { ...defaultConfig.s3, ...parsed.s3 },
-      minio: { ...defaultConfig.minio, ...parsed.minio }
+      minio: { ...defaultConfig.minio, ...parsed.minio },
+      ai: { ...defaultConfig.ai, ...parsed.ai }
     }
   } catch {
     return defaultConfig
@@ -175,12 +194,16 @@ export function createConfigRoutes() {
       minio: {
         ...current.minio,
         ...(updates.minio || {}),
-        secretKey: updates.minio?.secretKey === '********' 
-          ? current.minio.secretKey 
+        secretKey: updates.minio?.secretKey === '********'
+          ? current.minio.secretKey
           : (updates.minio?.secretKey || current.minio.secretKey)
+      },
+      ai: {
+        ...current.ai,
+        ...(updates.ai || {})
       }
     }
-    
+
     await saveConfig(newConfig)
     return c.json({ success: true })
   })
@@ -189,13 +212,98 @@ export function createConfigRoutes() {
   app.post('/test', async (c) => {
     const config = await loadConfig()
     // TODO: Actually test S3/MinIO connection
-    return c.json({ 
-      success: true, 
-      message: `Storage type: ${config.storageType} - Connection OK` 
+    return c.json({
+      success: true,
+      message: `Storage type: ${config.storageType} - Connection OK`
     })
+  })
+
+  // Test AI connection
+  app.post('/test-ai', async (c) => {
+    try {
+      const aiConfig = await c.req.json<AIConfig>()
+
+      if (!aiConfig.enabled) {
+        return c.json({ success: false, message: 'AI 功能未启用' })
+      }
+
+      const provider = aiConfig.provider || 'ollama'
+
+      // Test Ollama
+      if (provider === 'ollama') {
+        const baseUrl = aiConfig.baseUrl || 'http://localhost:11434'
+        try {
+          const response = await fetch(`${baseUrl}/api/tags`)
+          if (response.ok) {
+            return c.json({
+              success: true,
+              message: `✅ Ollama 连接成功 (${baseUrl})\n请确保已下载视觉模型: ollama pull llava`
+            })
+          } else {
+            return c.json({
+              success: false,
+              message: `❌ Ollama 连接失败: ${response.statusText}`
+            })
+          }
+        } catch (error) {
+          return c.json({
+            success: false,
+            message: `❌ 无法连接到 Ollama (${baseUrl})，请确保 Ollama 正在运行`
+          })
+        }
+      }
+
+      // Validate API key for cloud providers
+      if (!aiConfig.apiKey || aiConfig.apiKey.length < 10) {
+        return c.json({ success: false, message: '❌ API Key 格式无效' })
+      }
+
+      // Create a minimal 64x64 PNG test image using sharp (already a dependency)
+      const testImageBuffer = await sharp({
+        create: {
+          width: 64,
+          height: 64,
+          channels: 3,
+          background: { r: 0, g: 123, b: 255 }
+        }
+      })
+      .png()
+      .toBuffer()
+
+      // Import the AI tagging function
+      const { generateAITags } = await import('./images.js')
+
+      const providerNames = {
+        gemini: 'Google Gemini',
+        qwen: '通义千问',
+        zhipu: '智谱 AI',
+        siliconflow: '硅基流动'
+      }
+
+      try {
+        // Actually call the AI API with a test image
+        logger.debug(`[AI Test] Testing ${provider} with a test image...`)
+        const tags = await generateAITags(aiConfig, testImageBuffer, 'image/png')
+        logger.debug(`[AI Test] Success! Generated tags:`, tags)
+
+        return c.json({
+          success: true,
+          message: `✅ ${providerNames[provider]} 连接测试成功！\n\n测试图片生成的标签: ${tags.join(', ')}\n\n可以正常使用 AI 自动打标功能。`
+        })
+      } catch (apiError: any) {
+        logger.error(`[AI Test] ${provider} API test failed:`, apiError)
+        return c.json({
+          success: false,
+          message: `❌ ${providerNames[provider]} API 调用失败\n\n错误: ${apiError.message}\n\n请检查:\n1. API Key 是否正确\n2. 账户余额是否充足\n3. 网络连接是否正常`
+        })
+      }
+    } catch (error: any) {
+      logger.error('[AI Test] Test failed:', error)
+      return c.json({ success: false, message: `❌ 测试失败: ${error.message}` })
+    }
   })
 
   return app
 }
 
-export { loadConfig, buildImageUrl, type AppConfig, type SiteConfig, type AdvancedConfig }
+export { loadConfig, buildImageUrl, type AppConfig, type SiteConfig, type AdvancedConfig, type AIConfig }

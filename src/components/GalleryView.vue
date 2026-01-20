@@ -17,6 +17,29 @@ const copyToClipboard = async (text: string, type: 'direct' | 'markdown') => {
   }, 2000)
 }
 
+const copyBase64 = async () => {
+  if (!store.selectedImage) return
+
+  try {
+    const response = await fetch(store.selectedImage.url)
+    const blob = await response.blob()
+    const reader = new FileReader()
+
+    reader.onloadend = async () => {
+      const base64data = reader.result as string
+      await copy(base64data)
+      copyFeedback.value['base64'] = true
+      setTimeout(() => {
+        copyFeedback.value['base64'] = false
+      }, 2000)
+    }
+
+    reader.readAsDataURL(blob)
+  } catch (e) {
+    console.error('Failed to convert to base64', e)
+  }
+}
+
 const handleAddTag = () => {
   if (!store.selectedId || !newTagInput.value.trim()) return
   store.addTag(store.selectedId, newTagInput.value.trim())
@@ -176,13 +199,24 @@ const handleAddTag = () => {
           <label class="block text-xs mb-1">MARKDOWN</label>
           <div class="flex gap-1">
              <input readonly :value="`![${store.selectedImage.name}](${store.selectedImage.url})`" class="flex-1 text-xs border border-gray-500 shadow-win-inset px-1 py-0.5 bg-white text-gray-600 outline-none" />
-             <button 
+             <button
                 @click="copyToClipboard(`![${store.selectedImage.name}](${store.selectedImage.url})`, 'markdown')"
                 class="px-2 py-0.5 text-xs bg-win-gray shadow-win-button active:shadow-win-button-pressed min-w-[40px]"
              >
                {{ copyFeedback['markdown'] ? 'OK' : '复制' }}
              </button>
           </div>
+        </div>
+
+        <!-- Base64 Copy -->
+        <div>
+          <label class="block text-xs mb-1">Base64</label>
+          <button
+            @click="copyBase64"
+            class="w-full px-2 py-1 text-xs bg-win-gray shadow-win-button active:shadow-win-button-pressed flex justify-center items-center gap-1"
+          >
+            <span>{{ copyFeedback['base64'] ? '已复制 Base64!' : '复制 Base64 编码' }}</span>
+          </button>
         </div>
       </div>
 

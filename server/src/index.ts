@@ -1,19 +1,21 @@
+import 'dotenv/config'
 import { Hono } from 'hono'
 import { serve } from '@hono/node-server'
 import { cors } from 'hono/cors'
-import { logger } from 'hono/logger'
+import { logger as honoLogger } from 'hono/logger'
 import { serveStatic } from '@hono/node-server/serve-static'
 import path from 'path'
 
 import { createImageRoutes } from './routes/images.js'
 import { createConfigRoutes, loadConfig } from './routes/config.js'
 import { LocalStorage, S3Storage, type StorageAdapter } from './storage/index.js'
+import { logger } from './utils/logger.js'
 
 const app = new Hono()
 
 // Middleware
 app.use('*', cors())
-app.use('*', logger())
+app.use('*', honoLogger())
 
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: Date.now() }))
@@ -53,13 +55,22 @@ async function getStorageAdapter(): Promise<StorageAdapter> {
 // Setup routes
 async function setupRoutes() {
   const storage = await getStorageAdapter()
-  
+
   // API routes
   app.route('/api/images', createImageRoutes(storage))
   app.route('/api/config', createConfigRoutes())
-  
+
   // Serve uploaded files (for local storage)
-  app.use('/uploads/*', serveStatic({ root: './' }))
+  // ✅ 修复：使用正确的路径配置
+  const config = await loadConfig()
+  const uploadDir = path.resolve(process.cwd(), config.local.uploadDir)
+
+  app.use('/uploads/*', serveStatic({
+    root: uploadDir,
+    rewriteRequestPath: (path) => path.replace(/^\/uploads/, '')
+  }))
+
+  logger.info(`Static files served from: ${uploadDir}`)
 }
 
 // Start server

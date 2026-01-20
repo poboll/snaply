@@ -52,4 +52,14 @@ export class LocalStorage implements StorageAdapter {
       return false
     }
   }
+
+  async get(filename: string): Promise<Buffer | null> {
+    try {
+      const filePath = path.join(this.uploadDir, filename)
+      const buffer = await fs.readFile(filePath)
+      return buffer
+    } catch {
+      return null
+    }
+  }
 }

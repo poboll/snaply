@@ -31,16 +31,28 @@ export const api = {
 
   async uploadImages(files: File[], tags: string[] = []): Promise<ImageMeta[]> {
     const formData = new FormData()
-    files.forEach(file => formData.append('files', file))
+
+    // ✅ 关键修复：使用相同的 key 'files' 多次 append
+    // 这样后端才能接收到所有文件作为数组
+    files.forEach(file => {
+      formData.append('files', file)
+      console.log(`[API] Appending file: ${file.name}`)
+    })
+
     if (tags.length > 0) {
       formData.append('tags', tags.join(','))
     }
-    
+
+    console.log(`[API] Uploading ${files.length} files...`)
+
     const res = await fetch(`${BASE_URL}/images/upload`, {
       method: 'POST',
       body: formData
     })
     const json: ApiResponse<ImageMeta[]> = await res.json()
+
+    console.log(`[API] Upload response:`, json)
+
     return json.data || []
   },
 
