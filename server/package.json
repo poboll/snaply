@@ -5,7 +5,15 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsup src/index.ts --format esm --dts",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "pkg": "pnpm build && pkg dist/index.js --targets node20-linux-x64,node20-macos-x64,node20-win-x64 --output ../release/snaply"
+  },
+  "bin": "dist/index.js",
+  "pkg": {
+    "assets": [
+      "node_modules/sharp/**/*"
+    ],
+    "outputPath": "../release"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.500.0",
@@ -17,6 +25,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "pkg": "^5.8.1",
     "tsup": "^8.0.0",
     "tsx": "^4.7.0",
     "typescript": "^5.3.0"
